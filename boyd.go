@@ -89,10 +89,10 @@ func main() {
 	conn.AddCallback("001", func(e *irc.Event) { conn.Join(roomName) })
 	conn.AddCallback("PRIVMSG", func(e *irc.Event) {
 		msg := e.Message()
-		if strings.Contains(msg, "!quoteadd") {
+		if strings.HasPrefix(msg, "!quoteadd") {
 			var res string
 			for i := 0; i < len(msg); i++ {
-				if strings.Contains(msg[:i], "!quoteadd") {
+				if strings.HasPrefix(msg[:i], "!quoteadd") {
 					res = msg[i+1:]
 					break
 				}
@@ -101,7 +101,7 @@ func main() {
 			fout.Flush()
 			quoteList = append(quoteList, res)
 			conn.Privmsg(roomName, "Added!")
-		} else if strings.Contains(msg, "!quote") {
+		} else if strings.HasPrefix(msg, "!quote") {
 			ret := getQuote()
 			conn.Privmsg(roomName, ret)
 		} else if strings.Contains(msg, botName) {
