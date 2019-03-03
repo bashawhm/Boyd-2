@@ -60,13 +60,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
 
 	fin := bufio.NewScanner(bufio.NewReader(file))
 	fin.Split(bufio.ScanLines)
 	for fin.Scan() {
 		quoteList = append(quoteList, fin.Text())
 	}
+	file.Close()
 
 	file2, err := os.Create("./quotes.txt")
 	if err != nil {
@@ -75,8 +75,9 @@ func main() {
 	defer file2.Close()
 	fout := bufio.NewWriter(file2) //I'm the big dumb so until I figure out a better way, let's just live with this
 	for i := 0; i < len(quoteList); i++ {
-		fout.WriteString(quoteList[i])
+		fout.WriteString(quoteList[i] + "\n")
 	}
+	fout.Flush()
 
 	conn := irc.IRC(botName, botName)
 	err = conn.Connect(serverNamePort)
@@ -102,7 +103,6 @@ func main() {
 			conn.Privmsg(roomName, "Added!")
 		} else if strings.Contains(msg, "!quote") {
 			ret := getQuote()
-			fmt.Println(ret)
 			conn.Privmsg(roomName, ret)
 		} else if strings.Contains(msg, botName) {
 			conn.Privmsg(roomName, (buildSentance(5, 5)))
