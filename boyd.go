@@ -12,6 +12,7 @@ import (
 )
 
 var quoteList []string
+var randGen *rand.Rand
 
 func buildSentance(asideChance uint32, interjectionChance uint32) string {
 	subjects := [40]string{"those little green cops", "the Milkman", "the military industrial complex", "the suits", "the analyticals, man,", "those Bermuda Triangle sharks", "all them haters", "Hernando", "that little fat kid, with the bunny,", "the doctors back at the clinic", "the pelicans", "the squirrels", "the manager of that boy band", "those eggheads in their ivory tower", "that guy with the eyepatch", "the Psycho-whatsits", "the freaky hunchback girl who loves brains so much", "the dairy industry", "the kid with the goggles", "the dogtrack regulators", "the tuna canneries", "the National Park system", "Big Oil", "organized labor", "the rodeo clown cartel", "the media", "the cows", "foreign toymakers", "the dairy industry", "the intelligentsia", "the fluoride producers", "a secret doomsday cult", "the president's brother", "my first cat, Seymour,", "oh! one of my nostril hairs", "the intelligence community", "the five richest families in the country", "all those stupid crows", "some sort of power, y'know?", "my good pal Vinny"}
@@ -25,34 +26,33 @@ func buildSentance(asideChance uint32, interjectionChance uint32) string {
 	aside := [2]string{"Visiting hours are over!", "Why does that hydrant keep looking at me?"}
 	interjection := [15]string{"*chuckles*", "(Ho ho!)", "(Wait...)", "(Uh...)", "(Um...)", "*cough*", "(Uh...)", "(Hmm...)", "(Ha!)", "(Yeah, yeah, yeah...)", "(What?)", "(No, no, nonono...)", "(Okay, okay but...)", "(Huh?)", "(Oh-hoh, RIGHT...)"}
 
-	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 	sentance := ""
-	if rand.Uint32()%asideChance == (asideChance - 1) {
-		sentance = aside[rand.Uint32()%2]
+	if randGen.Uint32()%asideChance == (asideChance - 1) {
+		sentance = aside[randGen.Uint32()%2]
 		return sentance
 	}
-	if rand.Uint32()%interjectionChance == (interjectionChance - 1) {
-		sentance = interjection[rand.Uint32()%15]
+	if randGen.Uint32()%interjectionChance == (interjectionChance - 1) {
+		sentance = interjection[randGen.Uint32()%15]
 		return sentance
 	}
 
-	if rand.Int()%2 == 0 {
-		sentance = subjects[rand.Int()%40] + " " + transitiveVerb[rand.Int()%12] + " " + object[rand.Int()%17] + " " + conclution[rand.Int()%9]
+	if randGen.Int()%2 == 0 {
+		sentance = subjects[randGen.Int()%40] + " " + transitiveVerb[randGen.Int()%12] + " " + object[randGen.Int()%17] + " " + conclution[randGen.Int()%9]
 	} else {
-		sentance = subjects[rand.Uint32()%40] + " " + subjectConnector[rand.Uint32()%8] + " " + subjects[rand.Uint32()%40] + " " + intransitiveVerb[rand.Uint32()%17] + " " + preposition[rand.Uint32()%7] + " " + object[rand.Uint32()%17]
+		sentance = subjects[randGen.Uint32()%40] + " " + subjectConnector[randGen.Uint32()%8] + " " + subjects[randGen.Uint32()%40] + " " + intransitiveVerb[randGen.Uint32()%17] + " " + preposition[randGen.Uint32()%7] + " " + object[randGen.Uint32()%17]
 	}
 	return sentance
 }
 
 func getQuote() string {
-	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 	if len(quoteList) == 0 {
 		return "No quotes found..."
 	}
-	return quoteList[rand.Int()%len(quoteList)]
+	return quoteList[randGen.Int()%len(quoteList)]
 }
 
 func main() {
+	randGen = rand.New(rand.NewSource(time.Now().UnixNano()))
 	roomName := "#testit"
 	botName := "boyd_bot"
 	serverNamePort := "irc.freenode.net:6667"
@@ -88,8 +88,11 @@ func main() {
 
 	conn.AddCallback("001", func(e *irc.Event) { conn.Join(roomName) })
 	conn.AddCallback("PRIVMSG", func(e *irc.Event) {
+		if e.Arguments[0] != roomName {
+			return
+		}
 		msg := e.Message()
-		if strings.HasPrefix(msg, "!quoteadd") {
+		if strings.HasPrefix(msg, "!quoteadd ") {
 			var res string
 			for i := 0; i < len(msg); i++ {
 				if strings.HasPrefix(msg[:i], "!quoteadd") {
@@ -102,6 +105,9 @@ func main() {
 			quoteList = append(quoteList, res)
 			conn.Privmsg(roomName, "Added!")
 		} else if strings.HasPrefix(msg, "!quote") {
+			if len(msg) > 6 && msg[6] != ' ' {
+				return
+			}
 			ret := getQuote()
 			conn.Privmsg(roomName, ret)
 		} else if strings.Contains(msg, botName) {
