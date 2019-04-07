@@ -53,7 +53,7 @@ func getQuote() string {
 
 func main() {
 	randGen = rand.New(rand.NewSource(time.Now().UnixNano()))
-	roomName := "#testit"
+	roomNames := []string{"#testit"}
 	botName := "boyd_bot"
 	serverNamePort := "irc.freenode.net:6667"
 	file, err := os.Open("./quotes.txt")
@@ -86,11 +86,12 @@ func main() {
 		return
 	}
 
-	conn.AddCallback("001", func(e *irc.Event) { conn.Join(roomName) })
-	conn.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if e.Arguments[0] != roomName {
-			return
+	conn.AddCallback("001", func(e *irc.Event) {
+		for i := 0; i < len(roomNames); i++ {
+			conn.Join(roomNames[i])
 		}
+	})
+	conn.AddCallback("PRIVMSG", func(e *irc.Event) {
 		msg := e.Message()
 		if strings.HasPrefix(msg, "!quoteadd ") {
 			var res string
@@ -103,15 +104,15 @@ func main() {
 			fout.WriteString(res + "\n")
 			fout.Flush()
 			quoteList = append(quoteList, res)
-			conn.Privmsg(roomName, "Added!")
+			conn.Privmsg(e.Arguments[0], "Added!")
 		} else if strings.HasPrefix(msg, "!quote") {
 			if len(msg) > 6 && msg[6] != ' ' {
 				return
 			}
 			ret := getQuote()
-			conn.Privmsg(roomName, ret)
+			conn.Privmsg(e.Arguments[0], ret)
 		} else if strings.Contains(msg, botName) {
-			conn.Privmsg(roomName, (buildSentance(5, 5)))
+			conn.Privmsg(e.Arguments[0], (buildSentance(5, 5)))
 		}
 	})
 
