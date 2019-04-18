@@ -14,6 +14,16 @@ import (
 var quoteList []string
 var randGen *rand.Rand
 
+func filter(array []string, f func(string) bool) []string {
+	filteredArray := make([]string, 0)
+	for _, str := range array {
+		if f(str) {
+			filteredArray = append(filteredArray, str)
+		}
+	}
+	return filteredArray
+}
+
 func buildSentance(asideChance uint32, interjectionChance uint32) string {
 	subjects := [40]string{"those little green cops", "the Milkman", "the military industrial complex", "the suits", "the analyticals, man,", "those Bermuda Triangle sharks", "all them haters", "Hernando", "that little fat kid, with the bunny,", "the doctors back at the clinic", "the pelicans", "the squirrels", "the manager of that boy band", "those eggheads in their ivory tower", "that guy with the eyepatch", "the Psycho-whatsits", "the freaky hunchback girl who loves brains so much", "the dairy industry", "the kid with the goggles", "the dogtrack regulators", "the tuna canneries", "the National Park system", "Big Oil", "organized labor", "the rodeo clown cartel", "the media", "the cows", "foreign toymakers", "the dairy industry", "the intelligentsia", "the fluoride producers", "a secret doomsday cult", "the president's brother", "my first cat, Seymour,", "oh! one of my nostril hairs", "the intelligence community", "the five richest families in the country", "all those stupid crows", "some sort of power, y'know?", "my good pal Vinny"}
 	subjectConnector := [8]string{"and", "...or else maybe...", "...no, no, wait, I mean...", "in conjunction with", "with the full blessing of", "with the backing of", "who are merely the pawns of", "who are the puppet masters of"}
@@ -49,6 +59,22 @@ func getQuote() string {
 		return "No quotes found..."
 	}
 	return quoteList[randGen.Int()%len(quoteList)]
+}
+
+func getSearchQuote(search string) string {
+	if len(quoteList) == 0 {
+		return "No quotes found..."
+	}
+
+	filteredQuotes := filter(quoteList, func(str string) bool {
+		return strings.Contains(str, search)
+	})
+
+	if len(filteredQuotes) == 0 {
+		return "No quotes found with that search query..."
+	}
+
+	return filteredQuotes[randGen.Int()%len(filteredQuotes)]
 }
 
 func main() {
@@ -106,7 +132,10 @@ func main() {
 			quoteList = append(quoteList, res)
 			conn.Privmsg(e.Arguments[0], "Added!")
 		} else if strings.HasPrefix(msg, "!quote") {
-			if len(msg) > 6 && msg[6] != ' ' {
+			if len(msg) > 7 && msg[7] != ' ' {
+				searchMsg := msg[7:]
+				ret := getSearchQuote(searchMsg)
+				conn.Privmsg(e.Arguments[0], ret)
 				return
 			}
 			ret := getQuote()
