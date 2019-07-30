@@ -1,3 +1,0 @@
-"testing quote" ~bashawhm
-"cats" ~bashawhm
-""~milk
