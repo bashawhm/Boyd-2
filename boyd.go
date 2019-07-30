@@ -72,6 +72,17 @@ func writeQuote(fout *bufio.Writer, quote string) {
 	fout.Flush()
 }
 
+func stripPrefix(prefix, data string) string {
+	var res string
+	for i := 0; i < len(data); i++ {
+		if strings.HasPrefix(data[:i], prefix) {
+			res = data[i:]
+			break
+		}
+	}
+	return res
+}
+
 func main() {
 	randGen = rand.New(rand.NewSource(time.Now().UnixNano()))
 	roomNames := []string{"#testit"}
@@ -105,25 +116,20 @@ func main() {
 	conn.AddCallback("PRIVMSG", func(e *irc.Event) {
 		msg := e.Message()
 		if strings.HasPrefix(msg, "!quoteadd ") {
-			var res string
-			for i := 0; i < len(msg); i++ {
-				if strings.HasPrefix(msg[:i], "!quoteadd") {
-					res = msg[i+1:]
-					break
-				}
-			}
+			res := stripPrefix("!quoteadd ", msg)
+			fmt.Println("Adding quote: " + res)
 			writeQuote(fout, res)
 			quoteList = append(quoteList, res)
 			conn.Privmsg(e.Arguments[0], "Added!")
 		} else if strings.HasPrefix(msg, "!quote") {
-			if len(msg) > 7 && msg[7] != ' ' {
-				searchMsg := msg[7:]
+			res := stripPrefix("!quote", msg)
+			if len(res) != 0 {
+				searchMsg := stripPrefix(" ", res)
 				ret := getSearchQuote(searchMsg)
 				conn.Privmsg(e.Arguments[0], ret)
 				return
 			}
-			ret := getQuote()
-			conn.Privmsg(e.Arguments[0], ret)
+			conn.Privmsg(e.Arguments[0], getQuote())
 		} else if strings.Contains(msg, botName) {
 			conn.Privmsg(e.Arguments[0], (buildsentence(5, 5)))
 		}
