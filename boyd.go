@@ -47,34 +47,47 @@ func getSearchQuote(search string) string {
 	return filteredQuotes[randGen.Int()%len(filteredQuotes)]
 }
 
-func main() {
-	randGen = rand.New(rand.NewSource(time.Now().UnixNano()))
-	roomNames := []string{"#testit"}
-	botName := "boyd_bot"
-	serverNamePort := "irc.freenode.net:6667"
-	file, err := os.Open("./quotes.txt")
+func loadQuotes(fileName string) {
+	file, err := os.Open(fileName)
 	if err != nil {
 		panic(err)
 	}
-
 	fin := bufio.NewScanner(bufio.NewReader(file))
 	fin.Split(bufio.ScanLines)
 	for fin.Scan() {
 		quoteList = append(quoteList, fin.Text())
 	}
 	file.Close()
+}
 
-	file2, err := os.Create("./quotes.txt")
-	if err != nil {
-		panic(err)
-	}
-	defer file2.Close()
-
-	fout := bufio.NewWriter(file2) //I'm the big dumb so until I figure out a better way, let's just live with this
+func writeAllQuotes(fout *bufio.Writer) {
 	for i := 0; i < len(quoteList); i++ {
 		fout.WriteString(quoteList[i] + "\n")
 	}
 	fout.Flush()
+}
+
+func writeQuote(fout *bufio.Writer, quote string) {
+	fout.WriteString(quote + "\n")
+	fout.Flush()
+}
+
+func main() {
+	randGen = rand.New(rand.NewSource(time.Now().UnixNano()))
+	roomNames := []string{"#testit"}
+	botName := "boyd_bot"
+	serverNamePort := "irc.freenode.net:6667"
+
+	loadQuotes("./quotes.txt")
+
+	file, err := os.Create("./quotes.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	fout := bufio.NewWriter(file) //I'm the big dumb so until I figure out a better way, let's just live with this
+	writeAllQuotes(fout)
 
 	conn := irc.IRC(botName, botName)
 	err = conn.Connect(serverNamePort)
@@ -88,6 +101,7 @@ func main() {
 			conn.Join(roomNames[i])
 		}
 	})
+
 	conn.AddCallback("PRIVMSG", func(e *irc.Event) {
 		msg := e.Message()
 		if strings.HasPrefix(msg, "!quoteadd ") {
@@ -98,8 +112,7 @@ func main() {
 					break
 				}
 			}
-			fout.WriteString(res + "\n")
-			fout.Flush()
+			writeQuote(fout, res)
 			quoteList = append(quoteList, res)
 			conn.Privmsg(e.Arguments[0], "Added!")
 		} else if strings.HasPrefix(msg, "!quote") {
