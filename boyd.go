@@ -2,12 +2,13 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"math/rand"
 	"os"
+	"regexp"
 	"strings"
 	"time"
-	"regexp"
 
 	irc "github.com/thoj/go-ircevent"
 )
@@ -15,6 +16,7 @@ import (
 var quoteList []string
 var userList []string
 var randGen *rand.Rand
+var noPing *bool
 
 func filter(array []string, f func(string) bool) []string {
 	filteredArray := make([]string, 0)
@@ -28,10 +30,11 @@ func filter(array []string, f func(string) bool) []string {
 
 var lastSearches map[string][]string
 var searchOrder []string
+
 const MAX_SEARCHES int = 5
 
 func getSearchQuote(search string) string {
-	if(lastSearches == nil) {
+	if lastSearches == nil {
 		lastSearches = make(map[string][]string)
 	}
 
@@ -47,7 +50,7 @@ func getSearchQuote(search string) string {
 			})
 		} else {
 			lastSearches[search] = sl[1:]
-			fmt.Printf("...now %d\n", len(sl) - 1)
+			fmt.Printf("...now %d\n", len(sl)-1)
 		}
 		return ret
 	}
@@ -92,9 +95,11 @@ func getSearchQuote(search string) string {
 		fmt.Printf("Current sO is %#v\n", searchOrder)
 	}
 
-	for _, user := range userList {
-		if strings.Contains(ret, user) {
-			ret = strings.ReplaceAll(ret, user, user[:1] + "\u200B" + user[1:])
+	if *noPing {
+		for _, user := range userList {
+			if strings.Contains(ret, user) {
+				ret = strings.ReplaceAll(ret, user, user[:1]+"\u200B"+user[1:])
+			}
 		}
 	}
 
@@ -138,8 +143,11 @@ func stripPrefix(prefix, data string) string {
 }
 
 func main() {
+	noPing = flag.Bool("noping", false, "Inserts a zero width unicode character into username sections of quotes to prevent pinging")
+	flag.Parse()
+
 	randGen = rand.New(rand.NewSource(time.Now().UnixNano()))
-	roomNames := []string{"#test3b19763a92c"}
+	roomNames := []string{"#testit"}
 	botName := "boyd_bot"
 	serverNamePort := "irc.freenode.net:6667"
 
@@ -204,7 +212,7 @@ func main() {
 		msg := e.Message()
 		target := e.Arguments[0]
 		if target[0] != '#' {
-			target = e.Nick  // direct message
+			target = e.Nick // direct message
 		}
 		fmt.Printf("%v from %v to %v (target %v) === %v\n", e.Arguments, e.Nick, e.Arguments[0], target, msg)
 		if strings.HasPrefix(msg, "!quoteadd ") {
