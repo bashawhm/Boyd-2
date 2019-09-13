@@ -13,6 +13,7 @@ import (
 )
 
 var quoteList []string
+var userList []string
 var randGen *rand.Rand
 
 func filter(array []string, f func(string) bool) []string {
@@ -91,6 +92,12 @@ func getSearchQuote(search string) string {
 		fmt.Printf("Current sO is %#v\n", searchOrder)
 	}
 
+	for _, user := range userList {
+		if strings.Contains(ret, user) {
+			ret = strings.ReplaceAll(ret, user, user[:1] + "\u200B" + user[1:])
+		}
+	}
+
 	return ret
 }
 
@@ -163,6 +170,34 @@ func main() {
 
 	conn.AddCallback("NOTICE", func(e *irc.Event) {
 		fmt.Printf("%+v\n", e)
+	})
+
+	conn.AddCallback("353", func(e *irc.Event) {
+		userList = append(userList, strings.Split(e.Arguments[3], " ")...)
+		fmt.Printf("%+v\n", userList)
+	})
+
+	conn.AddCallback("JOIN", func(e *irc.Event) {
+		if e.Nick == botName {
+			return
+		}
+		for _, user := range userList {
+			if user == e.Nick {
+				return
+			}
+		}
+		userList = append(userList, e.Nick)
+	})
+
+	conn.AddCallback("NICK", func(e *irc.Event) {
+		fmt.Printf("%+v\n", e)
+		for _, user := range userList {
+			if user == e.Arguments[0] {
+				return
+			}
+		}
+		userList = append(userList, e.Arguments[0])
+		fmt.Printf("%+v\n", userList)
 	})
 
 	conn.AddCallback("PRIVMSG", func(e *irc.Event) {
